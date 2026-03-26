@@ -8,7 +8,7 @@ COPY .npmrc ./
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install || (echo "pnpm install failed" && exit 1)
 
 # ── Build ─────────────────────────────────────────────────────────────────
 FROM base AS builder
@@ -17,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-# Compila o pacote shared e garante que node_modules tem o dist compilado
+# Compila o pacote shared
 RUN cd packages/shared && \
     /app/node_modules/.bin/tsc --skipLibCheck || true && \
     mkdir -p /app/node_modules/@bgpmassa/shared && \
@@ -31,21 +31,20 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN /app/node_modules/.bin/next build
+# Debug: show what we have before building
+RUN echo "=== DEBUG: listing apps/web ===" && ls -la && \
+    echo "=== DEBUG: next binary ===" && ls -la /app/node_modules/.bin/next && \
+    echo "=== DEBUG: next.config ===" && cat next.config.ts && \
+    echo "=== DEBUG: starting next build ===" && \
+    /app/node_modules/.bin/next build 2>&1 || \
+    (echo "=== NEXT BUILD FAILED ===" && cat .next/trace 2>/dev/null; exit 1)
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
-
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
-
-# public dir may not exist
 RUN mkdir -p /app/public
-COPY --from=builder /app/apps/web/public /app/public/
-
 EXPOSE 3000
-
 CMD ["node", "server.js"]
