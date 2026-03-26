@@ -14,8 +14,6 @@ RUN pnpm install --frozen-lockfile || pnpm install
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules 2>/dev/null || true
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules 2>/dev/null || true
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
@@ -33,9 +31,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN ls -la /app/node_modules/.bin/next && \
-    echo "--- next.config.ts ---" && cat next.config.ts && \
-    /app/node_modules/.bin/next build
+RUN /app/node_modules/.bin/next build
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -45,7 +41,10 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
-COPY --from=builder /app/apps/web/public ./public 2>/dev/null || true
+
+# public dir may not exist
+RUN mkdir -p /app/public
+COPY --from=builder /app/apps/web/public /app/public/
 
 EXPOSE 3000
 
