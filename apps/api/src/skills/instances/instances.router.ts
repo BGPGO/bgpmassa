@@ -85,8 +85,95 @@ router.get("/:id/status", async (req: Request, res: Response) => {
     const newStatus = status.connected ? "CONNECTED" : "DISCONNECTED";
     await prisma.instance.update({ where: { id: instance.id }, data: { status: newStatus } });
     res.json({ ...status, status: newStatus });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status: number; data: unknown }; message: string };
+    console.error("[Status] Error:", axiosErr.response?.data || axiosErr.message);
+    res.status(500).json({ error: axiosErr.message, detail: axiosErr.response?.data });
+  }
+});
+
+// POST /api/instances/:id/sync - Pull all chats from Z-API and create contacts/conversations
+router.post("/:id/sync", async (req: Request, res: Response) => {
+  const instance = await prisma.instance.findUnique({ where: { id: req.params.id } });
+  if (!instance) {
+    res.status(404).json({ error: "Instância não encontrada" });
+    return;
+  }
+
+  try {
+    const client = new ZApiClient(instance.zapiInstanceId, instance.zapiToken);
+
+    let page = 1;
+    let imported = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const chats = (await client.getChats(page, 50)) as Array<{
+        id?: string;
+        chatId?: string;
+        phone?: string;
+        name?: string;
+        lastMessage?: { body?: string; timestamp?: number };
+        isGroup?: boolean;
+        groupName?: string;
+      }>;
+
+      if (!chats || chats.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const chat of chats) {
+        const chatId = chat.id || chat.chatId || chat.phone;
+        if (!chatId) continue;
+
+        // Determine phone/name
+        const phone = chatId.replace(/@.*$/, ""); // strip @c.us / @g.us
+        const name = chat.isGroup ? (chat.groupName || chat.name || phone) : (chat.name || phone);
+
+        // Upsert contact
+        const contact = await prisma.contact.upsert({
+          where: { phone },
+          update: { name: name || undefined },
+          create: { phone, name: name || null },
+        });
+
+        // Upsert conversation
+        const lastMsgAt = chat.lastMessage?.timestamp
+          ? new Date(chat.lastMessage.timestamp * 1000)
+          : undefined;
+
+        await prisma.conversation.upsert({
+          where: { instanceId_zapiChatId: { instanceId: instance.id, zapiChatId: chatId } },
+          update: { lastMessageAt: lastMsgAt },
+          create: {
+            instanceId: instance.id,
+            contactId: contact.id,
+            zapiChatId: chatId,
+            status: "OPEN",
+            lastMessageAt: lastMsgAt,
+          },
+        });
+
+        imported++;
+      }
+
+      // Z-API /chats pagination: if fewer than requested, we're done
+      if (chats.length < 50) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+
+    res.json({ ok: true, imported });
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status: number; data: unknown }; message: string };
+    console.error("[Sync] Error:", axiosErr.response?.data || axiosErr.message);
+    res.status(500).json({
+      error: axiosErr.message,
+      detail: axiosErr.response?.data,
+    });
   }
 });
 

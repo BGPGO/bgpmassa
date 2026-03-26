@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageCircle, Settings, Users, Bell, LogOut, Zap } from "lucide-react";
+import { MessageCircle, Settings, Users, Bell, LogOut, Zap, Smartphone } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { cn } from "../../lib/utils";
 
@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
+  { href: "/instances", icon: Smartphone, label: "Instâncias" },
   { href: "/admin/users", icon: Users, label: "Usuários" },
 ];
 
