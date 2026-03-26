@@ -59,21 +59,6 @@ services:
       postgres:
         condition: service_healthy
 
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-    restart: unless-stopped
-    ports:
-      - "4000:3000"
-    environment:
-      NODE_ENV: production
-    depends_on:
-      - api
-
 volumes:
   redis_data:
   postgres_data:
