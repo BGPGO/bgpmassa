@@ -1,20 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { MessageCircle, Settings, Users, Bell, LogOut, Building2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { MessageCircle, Settings, Users, Bell, LogOut } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
-import { useRouter } from "next/navigation";
 import { cn } from "../../lib/utils";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}
+
+const navItems: NavItem[] = [
   { href: "/conversations", icon: MessageCircle, label: "Conversas" },
-  { href: "/instances", icon: Building2, label: "Instâncias" },
   { href: "/notifications", icon: Bell, label: "Notificações" },
   { href: "/settings/profile", icon: Settings, label: "Configurações" },
 ];
 
-const adminItems = [{ href: "/admin/users", icon: Users, label: "Usuários" }];
+const adminItems: NavItem[] = [
+  { href: "/admin/users", icon: Users, label: "Usuários" },
+];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -22,6 +28,14 @@ export function Sidebar() {
   const router = useRouter();
 
   const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN";
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .slice(0, 2)
+        .map((p) => p[0])
+        .join("")
+        .toUpperCase()
+    : "?";
 
   async function handleLogout() {
     await logout();
@@ -29,74 +43,103 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-16 md:w-56 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">B</span>
-          </div>
-          <span className="font-semibold text-sm hidden md:block truncate">BGP Massa</span>
+    <aside className="w-14 bg-wa-sidebar flex flex-col h-full shrink-0 z-10">
+      {/* Logo */}
+      <div className="flex items-center justify-center h-14 shrink-0">
+        <div className="w-9 h-9 rounded-full bg-brand flex items-center justify-center">
+          <span className="text-white font-bold text-base leading-none">B</span>
         </div>
       </div>
 
-      <nav className="flex-1 p-2 space-y-1">
-        {navItems.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-              pathname.startsWith(href)
-                ? "bg-brand/10 text-brand-dark font-medium"
-                : "text-gray-600 hover:bg-gray-100"
-            )}
-          >
-            <Icon className="w-4 h-4 shrink-0" />
-            <span className="hidden md:block">{label}</span>
-          </Link>
-        ))}
+      {/* Nav items */}
+      <nav className="flex-1 flex flex-col items-center gap-1 py-2">
+        {navItems.map(({ href, icon: Icon, label }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <div key={href} className="relative group">
+              <Link
+                href={href}
+                className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-xl transition-colors",
+                  active
+                    ? "text-brand bg-white/10"
+                    : "text-gray-400 hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Icon className="w-5 h-5" />
+              </Link>
+              {/* Tooltip */}
+              <div className="absolute left-14 top-1/2 -translate-y-1/2 pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-lg">
+                  {label}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
 
         {isAdmin && (
           <>
-            <div className="pt-2 pb-1 hidden md:block">
-              <p className="text-xs text-gray-400 px-3 font-medium uppercase tracking-wide">Admin</p>
-            </div>
-            {adminItems.map(({ href, icon: Icon, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                  pathname.startsWith(href)
-                    ? "bg-brand/10 text-brand-dark font-medium"
-                    : "text-gray-600 hover:bg-gray-100"
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden md:block">{label}</span>
-              </Link>
-            ))}
+            <div className="w-6 border-t border-white/10 my-1" />
+            {adminItems.map(({ href, icon: Icon, label }) => {
+              const active = pathname.startsWith(href);
+              return (
+                <div key={href} className="relative group">
+                  <Link
+                    href={href}
+                    className={cn(
+                      "flex items-center justify-center w-10 h-10 rounded-xl transition-colors",
+                      active
+                        ? "text-brand bg-white/10"
+                        : "text-gray-400 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </Link>
+                  <div className="absolute left-14 top-1/2 -translate-y-1/2 pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-lg">
+                      {label}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </>
         )}
       </nav>
 
-      <div className="p-2 border-t border-gray-200">
-        <div className="flex items-center gap-2 px-3 py-2 mb-1">
-          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-gray-600">{user?.name?.[0]?.toUpperCase()}</span>
+      {/* Bottom user + logout */}
+      <div className="flex flex-col items-center gap-1 pb-3">
+        {/* User avatar */}
+        <div className="relative group">
+          <div className="w-9 h-9 rounded-full bg-gray-500 flex items-center justify-center cursor-default select-none">
+            <span className="text-white text-xs font-semibold">{initials}</span>
           </div>
-          <div className="hidden md:block min-w-0">
-            <p className="text-xs font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+          <div className="absolute left-14 bottom-0 pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-lg">
+              {user?.name}
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+            </div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 w-full transition-colors"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <span className="hidden md:block">Sair</span>
-        </button>
+
+        {/* Logout */}
+        <div className="relative group">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-400 hover:text-red-400 hover:bg-white/10 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+          <div className="absolute left-14 top-1/2 -translate-y-1/2 pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-lg">
+              Sair
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   );
