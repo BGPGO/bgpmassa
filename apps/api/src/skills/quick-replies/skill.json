@@ -1,0 +1,6 @@
+{
+  "name": "Quick Replies",
+  "version": "1.0.0",
+  "routePrefix": "/api/quick-replies",
+  "enabled": true
+}

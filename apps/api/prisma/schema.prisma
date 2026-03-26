@@ -21,10 +21,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  instancePermissions UserInstancePermission[]
-  messages            Message[]
-  notifications       Notification[]
-  refreshTokens       RefreshToken[]
+  instancePermissions   UserInstancePermission[]
+  messages              Message[]
+  notifications         Notification[]
+  refreshTokens         RefreshToken[]
+  assignedConversations Conversation[] @relation("AssignedConversations")
+  createdQuickReplies   QuickReply[]
 
   @@map("users")
 }
@@ -62,6 +64,7 @@ model Instance {
   userPermissions UserInstancePermission[]
   conversations   Conversation[]
   autoMessages    AutoMessage[]
+  quickReplies    QuickReply[]
 
   @@map("instances")
 }
@@ -106,17 +109,20 @@ model Contact {
 // ─── CONVERSATIONS ──────────────────────────────────────────────────────────
 
 model Conversation {
-  id            String             @id @default(uuid())
-  instanceId    String
-  contactId     String
-  zapiChatId    String
-  status        ConversationStatus @default(OPEN)
-  lastMessageAt DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id             String             @id @default(uuid())
+  instanceId     String
+  contactId      String
+  zapiChatId     String
+  status         ConversationStatus @default(OPEN)
+  assignedUserId String?
+  labels         String[]           @default([])
+  lastMessageAt  DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   instance       Instance        @relation(fields: [instanceId], references: [id])
   contact        Contact         @relation(fields: [contactId], references: [id])
+  assignedUser   User?           @relation("AssignedConversations", fields: [assignedUserId], references: [id])
   messages       Message[]
   responseTimers ResponseTimer[]
 
@@ -279,4 +285,23 @@ enum NotificationType {
   NEW_MESSAGE
   INSTANCE_STATUS_CHANGE
   SYSTEM
+}
+
+// ─── QUICK REPLIES ───────────────────────────────────────────────────────────
+
+model QuickReply {
+  id          String   @id @default(uuid())
+  instanceId  String?
+  createdById String
+  title       String
+  shortcut    String
+  body        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instance  Instance? @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("quick_replies")
 }

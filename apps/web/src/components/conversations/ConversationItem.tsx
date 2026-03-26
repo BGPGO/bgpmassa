@@ -74,6 +74,18 @@ function formatLastMessage(msg: Conversation["messages"][0] | undefined): string
   }
 }
 
+const LABEL_COLORS: Record<string, string> = {
+  "Urgente": "bg-red-100 text-red-700 border-red-200",
+  "VIP": "bg-purple-100 text-purple-700 border-purple-200",
+  "Aguardando": "bg-yellow-100 text-yellow-700 border-yellow-200",
+  "Financeiro": "bg-blue-100 text-blue-700 border-blue-200",
+  "Suporte": "bg-gray-100 text-gray-700 border-gray-200",
+};
+
+function getLabelColor(label: string): string {
+  return LABEL_COLORS[label] ?? "bg-gray-100 text-gray-600 border-gray-200";
+}
+
 export function ConversationItem({ conversation }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -124,6 +136,22 @@ export function ConversationItem({ conversation }: Props) {
         <div className="flex items-center justify-between gap-1 mt-0.5">
           <p className="text-xs text-gray-500 truncate flex-1">{preview || "\u00A0"}</p>
           <div className="flex items-center gap-1 shrink-0">
+            {/* Assigned user initials */}
+            {conversation.assignedUser && (
+              <div
+                className="w-4 h-4 rounded-full bg-brand/20 flex items-center justify-center shrink-0"
+                title={conversation.assignedUser.name}
+              >
+                <span className="text-[9px] font-semibold text-brand leading-none">
+                  {conversation.assignedUser.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((p) => p[0])
+                    .join("")
+                    .toUpperCase()}
+                </span>
+              </div>
+            )}
             {/* Instance badge */}
             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full truncate max-w-[60px]">
               {conversation.instance.name}
@@ -132,6 +160,23 @@ export function ConversationItem({ conversation }: Props) {
             <span className={cn("w-2 h-2 rounded-full shrink-0", getStatusDot(conversation.status))} />
           </div>
         </div>
+
+        {/* Labels */}
+        {conversation.labels && conversation.labels.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {conversation.labels.map((label) => (
+              <span
+                key={label}
+                className={cn(
+                  "text-[9px] font-medium px-1.5 py-0.5 rounded border",
+                  getLabelColor(label)
+                )}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </button>
   );

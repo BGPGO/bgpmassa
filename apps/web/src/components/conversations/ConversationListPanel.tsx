@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, UserCheck } from "lucide-react";
 import { useConversationsStore } from "../../store/conversations.store";
 import { useInstancesStore } from "../../store/instances.store";
 import { useSocket } from "../../providers/SocketProvider";
@@ -40,6 +40,7 @@ export function ConversationListPanel() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [instanceFilter, setInstanceFilter] = useState<string>("ALL");
   const [instanceDropdownOpen, setInstanceDropdownOpen] = useState(false);
+  const [assignedToMe, setAssignedToMe] = useState(false);
 
   // Initial load
   useEffect(() => {
@@ -48,8 +49,9 @@ export function ConversationListPanel() {
 
   useEffect(() => {
     const instanceId = instanceFilter !== "ALL" ? instanceFilter : undefined;
-    fetchConversations(instanceId, statusFilter !== "ALL" ? statusFilter : undefined);
-  }, [instanceFilter, statusFilter, fetchConversations]);
+    const assignedTo = assignedToMe ? "me" : undefined;
+    fetchConversations(instanceId, statusFilter !== "ALL" ? statusFilter : undefined, assignedTo);
+  }, [instanceFilter, statusFilter, assignedToMe, fetchConversations]);
 
   // Socket: update conversation when new message arrives
   const handleNewMessage = useCallback(
@@ -183,6 +185,22 @@ export function ConversationListPanel() {
             {tab.label}
           </button>
         ))}
+      </div>
+
+      {/* Assigned to me toggle */}
+      <div className="px-3 py-1.5 bg-white border-b border-gray-100 shrink-0">
+        <button
+          onClick={() => setAssignedToMe((v) => !v)}
+          className={cn(
+            "flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors",
+            assignedToMe
+              ? "bg-brand text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          )}
+        >
+          <UserCheck className="w-3.5 h-3.5" />
+          Minhas conversas
+        </button>
       </div>
 
       {/* Conversation list */}

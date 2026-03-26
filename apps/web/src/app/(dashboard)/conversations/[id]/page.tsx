@@ -18,6 +18,9 @@ interface ConversationDetail {
   id: string;
   status: ConvStatus;
   instanceId: string;
+  assignedUserId: string | null;
+  assignedUser: { id: string; name: string } | null;
+  labels: string[];
   contact: {
     id: string;
     name: string | null;
@@ -196,6 +199,18 @@ export default function ConversationPage() {
     setConversation((prev) => (prev ? { ...prev, status: newStatus } : prev));
   }
 
+  function handleAssignChange(user: { id: string; name: string } | null) {
+    setConversation((prev) =>
+      prev
+        ? { ...prev, assignedUser: user, assignedUserId: user ? user.id : null }
+        : prev
+    );
+  }
+
+  function handleLabelsChange(newLabels: string[]) {
+    setConversation((prev) => (prev ? { ...prev, labels: newLabels } : prev));
+  }
+
   const isDisabled =
     conversation?.status === "RESOLVED" || conversation?.status === "ARCHIVED";
   const disabledReason =
@@ -232,7 +247,11 @@ export default function ConversationPage() {
         instance={conversation.instance}
         status={conversation.status}
         activeTimer={activeTimer ?? null}
+        assignedUser={conversation.assignedUser ?? null}
+        labels={conversation.labels ?? []}
         onStatusChange={handleStatusChange}
+        onAssignChange={handleAssignChange}
+        onLabelsChange={handleLabelsChange}
       />
 
       {/* Messages area */}
@@ -279,6 +298,7 @@ export default function ConversationPage() {
         onSend={handleSend}
         disabled={isDisabled}
         disabledReason={disabledReason}
+        instanceId={conversation.instanceId}
       />
     </div>
   );

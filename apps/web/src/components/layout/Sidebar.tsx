@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageCircle, Settings, Users, Bell, LogOut } from "lucide-react";
+import { MessageCircle, Settings, Users, Bell, LogOut, Zap } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { cn } from "../../lib/utils";
 
@@ -15,6 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/conversations", icon: MessageCircle, label: "Conversas" },
   { href: "/notifications", icon: Bell, label: "Notificações" },
+  { href: "/settings/quick-replies", icon: Zap, label: "Respostas Rápidas" },
   { href: "/settings/profile", icon: Settings, label: "Configurações" },
 ];
 

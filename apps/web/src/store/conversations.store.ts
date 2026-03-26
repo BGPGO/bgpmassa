@@ -33,6 +33,9 @@ export interface Conversation {
   contactId: string;
   zapiChatId: string;
   status: "OPEN" | "PENDING" | "RESOLVED" | "ARCHIVED";
+  assignedUserId: string | null;
+  assignedUser: { id: string; name: string } | null;
+  labels: string[];
   lastMessageAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -45,7 +48,7 @@ export interface Conversation {
 interface ConversationsState {
   conversations: Conversation[];
   loading: boolean;
-  fetchConversations: (instanceId?: string, status?: string) => Promise<void>;
+  fetchConversations: (instanceId?: string, status?: string, assignedTo?: string) => Promise<void>;
   setConversations: (conversations: Conversation[]) => void;
   upsertConversation: (conv: Conversation) => void;
   setLoading: (loading: boolean) => void;
@@ -55,12 +58,13 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
   conversations: [],
   loading: false,
 
-  fetchConversations: async (instanceId?: string, status?: string) => {
+  fetchConversations: async (instanceId?: string, status?: string, assignedTo?: string) => {
     set({ loading: true });
     try {
       const params: Record<string, string> = {};
       if (instanceId) params.instanceId = instanceId;
       if (status && status !== "ALL") params.status = status;
+      if (assignedTo) params.assignedTo = assignedTo;
       const { data } = await api.get("/api/conversations", { params });
       const items: Conversation[] = data.items ?? data;
       set({ conversations: items });
