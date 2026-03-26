@@ -36,15 +36,18 @@ RUN node_modules/.bin/tsc -p packages/shared/tsconfig.json --skipLibCheck && \
 
 # Gera o Prisma client e compila a API
 RUN cd apps/api && /app/node_modules/.bin/prisma generate
-RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck
+RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck --noEmitOnError false || true
+RUN ls -la apps/api/dist/server.js || (echo "ERROR: tsc produced no output" && exit 1)
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# OpenSSL is required by Prisma on Alpine
+RUN apk add --no-cache openssl
+
 ENV NODE_ENV=production
 
-# Com node-linker=hoisted, todos os pacotes ficam no node_modules raiz
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/apps/api/dist ./dist

@@ -40,6 +40,7 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
 RUN /app/node_modules/.bin/next build
@@ -47,14 +48,11 @@ RUN /app/node_modules/.bin/next build
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
 
 # O output standalone do Next.js inclui tudo que é necessário para rodar
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
-COPY --from=builder /app/apps/web/public ./public
-
+RUN mkdir -p /app/public
 EXPOSE 3000
-
 CMD ["node", "server.js"]
