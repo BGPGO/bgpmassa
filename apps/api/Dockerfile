@@ -22,19 +22,20 @@ RUN cd packages/shared && /app/node_modules/.bin/tsc --skipLibCheck && \
     mkdir -p /app/node_modules/@bgpmassa/shared && \
     cp -r /app/packages/shared/dist /app/node_modules/@bgpmassa/shared/ && \
     cp /app/packages/shared/package.json /app/node_modules/@bgpmassa/shared/
-# Gera o Prisma client e compila a API (skipLibCheck + noEmitOnError false)
+# Gera o Prisma client e compila a API
 RUN cd apps/api && /app/node_modules/.bin/prisma generate
 RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck --noEmitOnError false || true
-# Verify dist was created
 RUN ls -la apps/api/dist/server.js || (echo "ERROR: tsc produced no output" && exit 1)
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# OpenSSL is required by Prisma on Alpine
+RUN apk add --no-cache openssl
+
 ENV NODE_ENV=production
 
-# Com node-linker=hoisted, todos os pacotes ficam no node_modules raiz
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/apps/api/dist ./dist
@@ -43,5 +44,4 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-# Roda migrations e inicia o servidor
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/server.js"]
