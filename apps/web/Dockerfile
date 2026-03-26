@@ -17,9 +17,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-# Compila o pacote shared e injeta no node_modules
-RUN /app/node_modules/.bin/tsc -p packages/shared/tsconfig.json --skipLibCheck
-RUN cp -r /app/packages/shared/dist /app/node_modules/@bgpmassa/shared/dist
+# Compila o pacote shared e garante que node_modules tem o dist compilado
+RUN /app/node_modules/.bin/tsc -p packages/shared/tsconfig.json --skipLibCheck && \
+    mkdir -p /app/node_modules/@bgpmassa/shared && \
+    cp -r /app/packages/shared/dist /app/node_modules/@bgpmassa/shared/ && \
+    cp /app/packages/shared/package.json /app/node_modules/@bgpmassa/shared/
 
 WORKDIR /app/apps/web
 ARG NEXT_PUBLIC_API_URL

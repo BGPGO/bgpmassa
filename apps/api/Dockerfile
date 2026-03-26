@@ -16,9 +16,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
-# Compila o pacote shared primeiro e injeta o dist no node_modules
-RUN cd packages/shared && /app/node_modules/.bin/tsc --skipLibCheck
-RUN cp -r /app/packages/shared/dist /app/node_modules/@bgpmassa/shared/dist
+# Compila o pacote shared e garante que node_modules tem o dist compilado
+RUN cd packages/shared && /app/node_modules/.bin/tsc --skipLibCheck && \
+    mkdir -p /app/node_modules/@bgpmassa/shared && \
+    cp -r /app/packages/shared/dist /app/node_modules/@bgpmassa/shared/ && \
+    cp /app/packages/shared/package.json /app/node_modules/@bgpmassa/shared/
 # Gera o Prisma client e compila a API
 RUN cd apps/api && /app/node_modules/.bin/prisma generate
 RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck
