@@ -1,0 +1,8 @@
+{
+  "name": "permissions",
+  "version": "1.0.0",
+  "routePrefix": "/api/permissions",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["users", "instances"]
+}

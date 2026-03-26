@@ -1,0 +1,8 @@
+{
+  "name": "webhooks",
+  "version": "1.0.0",
+  "routePrefix": "/api/webhooks",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["conversations", "messages", "response-timer"]
+}

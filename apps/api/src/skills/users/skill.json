@@ -1,0 +1,8 @@
+{
+  "name": "users",
+  "version": "1.0.0",
+  "routePrefix": "/api/users",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["auth"]
+}

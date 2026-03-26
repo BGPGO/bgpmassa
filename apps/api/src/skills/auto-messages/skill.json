@@ -1,0 +1,8 @@
+{
+  "name": "auto-messages",
+  "version": "1.0.0",
+  "routePrefix": "/api/auto-messages",
+  "enabled": true,
+  "queues": ["auto-message-queue"],
+  "dependsOn": ["instances", "auth"]
+}

@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// ─── USERS ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  signature    String?
+  role         UserRole @default(AGENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instancePermissions UserInstancePermission[]
+  messages            Message[]
+  notifications       Notification[]
+  refreshTokens       RefreshToken[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  AGENT
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ─── INSTANCES ──────────────────────────────────────────────────────────────
+
+model Instance {
+  id             String         @id @default(uuid())
+  name           String
+  zapiInstanceId String         @unique
+  zapiToken      String
+  phoneNumber    String?
+  status         InstanceStatus @default(DISCONNECTED)
+  webhookSecret  String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  userPermissions UserInstancePermission[]
+  conversations   Conversation[]
+  autoMessages    AutoMessage[]
+
+  @@map("instances")
+}
+
+enum InstanceStatus {
+  CONNECTED
+  DISCONNECTED
+  QRCODE_PENDING
+}
+
+model UserInstancePermission {
+  id         String   @id @default(uuid())
+  userId     String
+  instanceId String
+  canRead    Boolean  @default(true)
+  canWrite   Boolean  @default(false)
+  canManage  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, instanceId])
+  @@map("user_instance_permissions")
+}
+
+// ─── CONTACTS ───────────────────────────────────────────────────────────────
+
+model Contact {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversations Conversation[]
+
+  @@map("contacts")
+}
+
+// ─── CONVERSATIONS ──────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String             @id @default(uuid())
+  instanceId    String
+  contactId     String
+  zapiChatId    String
+  status        ConversationStatus @default(OPEN)
+  lastMessageAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  instance       Instance        @relation(fields: [instanceId], references: [id])
+  contact        Contact         @relation(fields: [contactId], references: [id])
+  messages       Message[]
+  responseTimers ResponseTimer[]
+
+  @@unique([instanceId, zapiChatId])
+  @@map("conversations")
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  ARCHIVED
+}
+
+// ─── MESSAGES ───────────────────────────────────────────────────────────────
+
+model Message {
+  id               String        @id @default(uuid())
+  conversationId   String
+  zapiMessageId    String?       @unique
+  senderId         String?
+  direction        Direction
+  type             MessageType   @default(TEXT)
+  body             String
+  signatureApplied Boolean       @default(false)
+  status           MessageStatus @default(PENDING)
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  readAt           DateTime?
+  createdAt        DateTime      @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User?        @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  STICKER
+  LOCATION
+  TEMPLATE
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// ─── RESPONSE TIMERS ────────────────────────────────────────────────────────
+
+model ResponseTimer {
+  id             String      @id @default(uuid())
+  conversationId String
+  triggeredAt    DateTime    @default(now())
+  resolvedAt     DateTime?
+  status         TimerStatus @default(RUNNING)
+
+  conversation Conversation    @relation(fields: [conversationId], references: [id])
+  alerts       ResponseAlert[]
+
+  @@map("response_timers")
+}
+
+model ResponseAlert {
+  id              String   @id @default(uuid())
+  timerId         String
+  threshold       Int
+  sentAt          DateTime @default(now())
+  notifiedUserIds String[]
+
+  timer ResponseTimer @relation(fields: [timerId], references: [id])
+
+  @@map("response_alerts")
+}
+
+enum TimerStatus {
+  RUNNING
+  RESOLVED
+  CANCELLED
+}
+
+// ─── AUTO MESSAGES ──────────────────────────────────────────────────────────
+
+model AutoMessage {
+  id           String      @id @default(uuid())
+  instanceId   String
+  name         String
+  trigger      AutoTrigger
+  body         String
+  delaySeconds Int         @default(0)
+  isActive     Boolean     @default(true)
+  conditions   Json?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  instance   Instance               @relation(fields: [instanceId], references: [id])
+  executions AutoMessageExecution[]
+
+  @@map("auto_messages")
+}
+
+enum AutoTrigger {
+  ON_FIRST_MESSAGE
+  ON_NEW_CONVERSATION
+  ON_KEYWORD
+  ON_OUTSIDE_HOURS
+  ON_UNRESPONDED_TIMER
+}
+
+model AutoMessageExecution {
+  id            String      @id @default(uuid())
+  autoMessageId String
+  contactPhone  String
+  executedAt    DateTime    @default(now())
+  success       Boolean
+
+  autoMessage AutoMessage @relation(fields: [autoMessageId], references: [id])
+
+  @@map("auto_message_executions")
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  RESPONSE_ALERT_15M
+  RESPONSE_ALERT_30M
+  RESPONSE_ALERT_1H
+  RESPONSE_ALERT_2H
+  RESPONSE_ALERT_4H
+  NEW_MESSAGE
+  INSTANCE_STATUS_CHANGE
+  SYSTEM
+}

@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      ZAPI_WEBHOOK_SECRET: ${ZAPI_WEBHOOK_SECRET}
+      ZAPI_CLIENT_TOKEN: ${ZAPI_CLIENT_TOKEN}
+      ZAPI_INSTANCE_1_NAME: ${ZAPI_INSTANCE_1_NAME}
+      ZAPI_INSTANCE_1_ID: ${ZAPI_INSTANCE_1_ID}
+      ZAPI_INSTANCE_1_TOKEN: ${ZAPI_INSTANCE_1_TOKEN}
+      ZAPI_INSTANCE_2_NAME: ${ZAPI_INSTANCE_2_NAME}
+      ZAPI_INSTANCE_2_ID: ${ZAPI_INSTANCE_2_ID}
+      ZAPI_INSTANCE_2_TOKEN: ${ZAPI_INSTANCE_2_TOKEN}
+      ZAPI_INSTANCE_3_NAME: ${ZAPI_INSTANCE_3_NAME}
+      ZAPI_INSTANCE_3_ID: ${ZAPI_INSTANCE_3_ID}
+      ZAPI_INSTANCE_3_TOKEN: ${ZAPI_INSTANCE_3_TOKEN}
+    ports:
+      - "3001:3001"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  redis_data:

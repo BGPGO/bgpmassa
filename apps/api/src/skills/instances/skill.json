@@ -1,0 +1,8 @@
+{
+  "name": "instances",
+  "version": "1.0.0",
+  "routePrefix": "/api/instances",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["auth"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "notifications",
+  "version": "1.0.0",
+  "routePrefix": "/api/notifications",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["auth"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "messages",
+  "version": "1.0.0",
+  "routePrefix": "/api/messages",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["conversations", "auth"]
+}

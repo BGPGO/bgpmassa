@@ -1,0 +1,8 @@
+{
+  "name": "response-timer",
+  "version": "1.0.0",
+  "routePrefix": "/api/response-timers",
+  "enabled": true,
+  "queues": ["response-timer-queue"],
+  "dependsOn": ["conversations", "notifications"]
+}
