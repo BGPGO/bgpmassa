@@ -36,8 +36,15 @@ RUN node_modules/.bin/tsc -p packages/shared/tsconfig.json --skipLibCheck && \
 
 # Gera o Prisma client e compila a API
 RUN cd apps/api && /app/node_modules/.bin/prisma generate
-RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck --noEmitOnError false || true
+RUN cd apps/api && /app/node_modules/.bin/tsc --skipLibCheck || true
 RUN ls -la apps/api/dist/server.js || (echo "ERROR: tsc produced no output" && exit 1)
+
+# Copia skill.json para dist/ (tsc não copia arquivos não-TypeScript)
+RUN find apps/api/src/skills -name "skill.json" | while read f; do \
+      dest="apps/api/dist/skills/$(basename $(dirname $f))/skill.json"; \
+      mkdir -p $(dirname $dest); \
+      cp "$f" "$dest"; \
+    done
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
