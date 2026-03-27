@@ -51,9 +51,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# O output standalone do Next.js inclui tudo que é necessário para rodar
+# O output standalone do Next.js preserva estrutura do monorepo
 COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./.next/static
-RUN mkdir -p /app/public
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+RUN mkdir -p ./apps/web/public
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]
