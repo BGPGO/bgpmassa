@@ -31,10 +31,9 @@ RUN node_modules/.bin/tsc -p packages/shared/tsconfig.json --skipLibCheck && \
     cp -r packages/shared/src  node_modules/@bgpmassa/shared/src && \
     cp    packages/shared/package.json node_modules/@bgpmassa/shared/package.json
 
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SOCKET_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+# URL interna da API (usada pelo proxy reverso do Next.js — não vai para o browser)
+ARG INTERNAL_API_URL=http://api:3001
+ENV INTERNAL_API_URL=$INTERNAL_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
