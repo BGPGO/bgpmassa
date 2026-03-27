@@ -42,4 +42,8 @@ export class ZApiClient {
     });
     return data;
   }
+
+  async setWebhook(url: string): Promise<void> {
+    await this.client.put("/update-webhook-delivery-url", { value: url, enabled: true });
+  }
 }

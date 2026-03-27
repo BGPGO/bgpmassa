@@ -11,6 +11,8 @@ const schema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // URL pública da API — usada para registrar webhooks no Z-API e exibir URLs corretas
+  APP_URL: z.string().default("http://localhost:3001"),
 });
 
 export const env = schema.parse(process.env);
