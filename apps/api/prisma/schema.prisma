@@ -25,8 +25,11 @@ model User {
   messages              Message[]
   notifications         Notification[]
   refreshTokens         RefreshToken[]
-  assignedConversations Conversation[] @relation("AssignedConversations")
+  assignedConversations Conversation[]          @relation("AssignedConversations")
   createdQuickReplies   QuickReply[]
+  userAreas             UserArea[]
+  grantedVisibilities   UserAreaVisibility[]    @relation("VisibilityGrantedBy")
+  areaVisibilities      UserAreaVisibility[]    @relation("VisibilityUser")
 
   @@map("users")
 }
@@ -65,6 +68,7 @@ model Instance {
   conversations   Conversation[]
   autoMessages    AutoMessage[]
   quickReplies    QuickReply[]
+  areas           Area[]
 
   @@map("instances")
 }
@@ -115,6 +119,7 @@ model Conversation {
   zapiChatId     String
   status         ConversationStatus @default(OPEN)
   assignedUserId String?
+  areaId         String?
   labels         String[]           @default([])
   lastMessageAt  DateTime?
   createdAt      DateTime           @default(now())
@@ -123,10 +128,12 @@ model Conversation {
   instance       Instance        @relation(fields: [instanceId], references: [id])
   contact        Contact         @relation(fields: [contactId], references: [id])
   assignedUser   User?           @relation("AssignedConversations", fields: [assignedUserId], references: [id])
+  area           Area?           @relation(fields: [areaId], references: [id], onDelete: SetNull)
   messages       Message[]
   responseTimers ResponseTimer[]
 
   @@unique([instanceId, zapiChatId])
+  @@index([areaId])
   @@map("conversations")
 }
 
@@ -285,6 +292,59 @@ enum NotificationType {
   NEW_MESSAGE
   INSTANCE_STATUS_CHANGE
   SYSTEM
+}
+
+// ─── AREAS ──────────────────────────────────────────────────────────────────
+
+model Area {
+  id         String   @id @default(uuid())
+  instanceId String
+  name       String
+  patterns   String[] @default([])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance      Instance             @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  userAreas     UserArea[]
+  visibilities  UserAreaVisibility[]
+  conversations Conversation[]
+
+  @@unique([instanceId, name])
+  @@map("areas")
+}
+
+enum AreaRole {
+  MEMBER
+  AREA_ADMIN
+}
+
+model UserArea {
+  id        String   @id @default(uuid())
+  userId    String
+  areaId    String
+  role      AreaRole @default(MEMBER)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, areaId])
+  @@map("user_areas")
+}
+
+model UserAreaVisibility {
+  id            String   @id @default(uuid())
+  userId        String
+  visibleAreaId String
+  grantedById   String
+  createdAt     DateTime @default(now())
+
+  user        User @relation("VisibilityUser", fields: [userId], references: [id], onDelete: Cascade)
+  visibleArea Area @relation(fields: [visibleAreaId], references: [id], onDelete: Cascade)
+  grantedBy   User @relation("VisibilityGrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([userId, visibleAreaId])
+  @@map("user_area_visibilities")
 }
 
 // ─── QUICK REPLIES ───────────────────────────────────────────────────────────

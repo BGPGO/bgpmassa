@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, UserCircle, Tag, X } from "lucide-react";
+import { ChevronDown, UserCircle, Tag, X, BarChart2 } from "lucide-react";
 import { ResponseTimerBadge } from "./ResponseTimerBadge";
+import { InteractionHistoryModal } from "./InteractionHistoryModal";
 import { api } from "../../lib/api-client";
+import { useAuthStore } from "../../store/auth.store";
 import { cn } from "../../lib/utils";
 
 interface Contact {
@@ -34,6 +36,7 @@ interface Props {
   activeTimer?: { triggeredAt: string } | null;
   assignedUser: { id: string; name: string } | null;
   labels: string[];
+  areaId?: string | null;
   onStatusChange: (status: ConvStatus) => void;
   onAssignChange: (user: { id: string; name: string } | null) => void;
   onLabelsChange: (labels: string[]) => void;
@@ -102,13 +105,21 @@ export function ChatHeader({
   activeTimer,
   assignedUser,
   labels,
+  areaId,
   onStatusChange,
   onAssignChange,
   onLabelsChange,
 }: Props) {
+  const { user } = useAuthStore();
+  const canSeeHistory =
+    user?.role === "ADMIN" ||
+    user?.role === "SUPERADMIN" ||
+    (user as unknown as { areaRole?: string })?.areaRole === "AREA_ADMIN";
+
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
   const [labelEditorOpen, setLabelEditorOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [changing, setChanging] = useState(false);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -247,6 +258,17 @@ export function ChatHeader({
         <div className="shrink-0">
           <ResponseTimerBadge triggeredAt={activeTimer.triggeredAt} />
         </div>
+      )}
+
+      {/* Interaction history button — AREA_ADMIN and above only */}
+      {canSeeHistory && areaId && (
+        <button
+          onClick={() => setHistoryOpen(true)}
+          className="shrink-0 flex items-center gap-1 text-gray-300 hover:text-white text-xs bg-white/10 hover:bg-white/20 px-2 py-1.5 rounded-lg transition-colors"
+          title="Histórico de interação"
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+        </button>
       )}
 
       {/* Labels editor button */}
@@ -393,5 +415,15 @@ export function ChatHeader({
         )}
       </div>
     </div>
+
+    {/* Interaction history modal */}
+    {historyOpen && areaId && (
+      <InteractionHistoryModal
+        conversationId={conversationId}
+        areaId={areaId}
+        contactName={contact.name || contact.phone}
+        onClose={() => setHistoryOpen(false)}
+      />
+    )}
   );
 }

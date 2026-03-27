@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../../middleware/authenticate";
 import { prisma } from "../../config/database";
 import { ZApiClient } from "../../lib/zapi-client";
+import { resolveAreaByName } from "../areas/areas.service";
 import crypto from "crypto";
 import type { Request, Response } from "express";
 
@@ -138,6 +139,9 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
           create: { phone, name: name || null },
         });
 
+        // Resolve area by chat name
+        const areaId = await resolveAreaByName(name || phone, instance.id);
+
         // Upsert conversation
         const lastMsgAt = chat.lastMessage?.timestamp
           ? new Date(chat.lastMessage.timestamp * 1000)
@@ -145,13 +149,14 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
 
         await prisma.conversation.upsert({
           where: { instanceId_zapiChatId: { instanceId: instance.id, zapiChatId: chatId } },
-          update: { lastMessageAt: lastMsgAt },
+          update: { lastMessageAt: lastMsgAt, ...(areaId ? { areaId } : {}) },
           create: {
             instanceId: instance.id,
             contactId: contact.id,
             zapiChatId: chatId,
             status: "OPEN",
             lastMessageAt: lastMsgAt,
+            ...(areaId ? { areaId } : {}),
           },
         });
 

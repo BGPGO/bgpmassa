@@ -1,0 +1,8 @@
+{
+  "name": "areas",
+  "version": "1.0.0",
+  "routePrefix": "/api/areas",
+  "enabled": true,
+  "queues": [],
+  "dependsOn": ["instances", "auth", "users"]
+}

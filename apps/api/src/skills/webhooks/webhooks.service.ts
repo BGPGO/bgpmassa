@@ -1,6 +1,7 @@
 import { prisma } from "../../config/database";
 import { getIO } from "../../config/socket";
 import { startTimer, resolveTimer } from "../response-timer/timer.scheduler";
+import { resolveAreaByName } from "../areas/areas.service";
 import type { ZApiWebhookPayload } from "@bgpmassa/shared";
 
 export async function handleInboundMessage(
@@ -21,6 +22,10 @@ export async function handleInboundMessage(
     },
   });
 
+  // Resolve area by contact/group name
+  const chatName = payload.senderName || payload.chatId || "";
+  const areaId = await resolveAreaByName(chatName, instanceId);
+
   // Upsert conversation
   const conversation = await prisma.conversation.upsert({
     where: { instanceId_zapiChatId: { instanceId, zapiChatId: payload.chatId } },
@@ -30,10 +35,13 @@ export async function handleInboundMessage(
       zapiChatId: payload.chatId,
       status: "OPEN",
       lastMessageAt: new Date(payload.momment),
+      ...(areaId ? { areaId } : {}),
     },
     update: {
       lastMessageAt: new Date(payload.momment),
       status: "OPEN",
+      // Only set areaId if not already set
+      ...(areaId ? { areaId } : {}),
     },
   });
 

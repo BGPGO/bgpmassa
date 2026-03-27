@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/authenticate";
 import { prisma } from "../../config/database";
+import { getVisibleAreaIds } from "../areas/areas.service";
 import type { Request, Response } from "express";
 
 export const router = Router();
@@ -36,6 +37,24 @@ router.get("/", async (req: Request, res: Response) => {
     where.assignedUserId = null;
   }
 
+  // Area filter: non-admins only see their accessible areas
+  const { areaId } = req.query;
+  if (areaId) {
+    where.areaId = String(areaId);
+  } else {
+    const visibleAreaIds = await getVisibleAreaIds(
+      req.user.sub,
+      req.user.role,
+      instanceId ? String(instanceId) : undefined
+    );
+    if (visibleAreaIds !== null && visibleAreaIds.length > 0) {
+      // User has area restrictions — show their areas + conversations without area
+      where.OR = [{ areaId: { in: visibleAreaIds } }, { areaId: null }];
+    }
+    // null = admin, no area restriction
+    // empty array with no areas configured = show all (backwards compatible)
+  }
+
   const skip = (Number(page) - 1) * Number(limit);
   const [items, total] = await Promise.all([
     prisma.conversation.findMany({
@@ -44,6 +63,7 @@ router.get("/", async (req: Request, res: Response) => {
         contact: true,
         instance: { select: { id: true, name: true } },
         assignedUser: { select: { id: true, name: true } },
+        area: { select: { id: true, name: true } },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
