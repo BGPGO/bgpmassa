@@ -56,5 +56,5 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-# DEBUG: just start server, no migrations/seed
-CMD ["sh", "-c", "echo '[DEBUG] Starting server directly...' && node dist/server.js 2>&1 || echo '[DEBUG] Server crashed with code $?'"]
+# Start with error capture - if server fails, show error via HTTP
+CMD ["sh", "-c", "node dist/server.js 2>/tmp/err.log || (echo \"Server crashed. Error:\" && cat /tmp/err.log && node -e \"const e=require('fs').readFileSync('/tmp/err.log','utf8');require('http').createServer((q,s)=>{s.end('ERROR: '+e)}).listen(3001,()=>console.log('Error server on 3001'))\" && sleep 3600)"]
