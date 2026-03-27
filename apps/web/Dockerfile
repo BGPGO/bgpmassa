@@ -47,7 +47,8 @@ RUN echo "=== STEP 2: Check shared ===" && ls /app/node_modules/@bgpmassa/shared
 RUN echo "=== STEP 3: Check web files ===" && ls /app/apps/web/src/ && ls /app/apps/web/next.config.mjs
 
 WORKDIR /app/apps/web
-RUN echo "=== STEP 4: next build ===" && /app/node_modules/.bin/next build
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+RUN /app/node_modules/.bin/next build 2>&1; echo "EXIT CODE: $?"
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
