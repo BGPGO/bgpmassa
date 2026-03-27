@@ -56,7 +56,5 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-COPY apps/api/entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
-
-CMD ["./entrypoint.sh"]
+# Startup: wait for deps, migrate, seed, serve
+CMD ["sh", "-c", "echo '[Startup] Waiting 15s for postgres/redis...' && sleep 15 && echo '[Startup] Running migrations...' && (node_modules/.bin/prisma migrate deploy 2>&1 || echo '[Startup] Migration failed') && echo '[Startup] Running seed...' && (node dist/seed.js 2>&1 || echo '[Startup] Seed failed') && echo '[Startup] Starting server...' && exec node dist/server.js"]
