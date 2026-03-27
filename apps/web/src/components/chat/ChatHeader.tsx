@@ -216,6 +216,7 @@ export function ChatHeader({
   const visibleLabels = (labels ?? []).slice(0, 3);
 
   return (
+    <>
     <div className="bg-wa-header px-4 py-2.5 flex items-center gap-3 shrink-0 shadow-sm">
       {/* Avatar */}
       <div
@@ -425,5 +426,6 @@ export function ChatHeader({
         onClose={() => setHistoryOpen(false)}
       />
     )}
+    </>
   );
 }
