@@ -3,13 +3,14 @@ import { prisma } from "../../config/database";
 import { getIO } from "../../config/socket";
 import { BROADCAST_ALERT_THRESHOLD_MINUTES } from "@bgpmassa/shared";
 import type { ResponseTimeAlertEvent, ResponseThreshold } from "@bgpmassa/shared";
-import { getTimerQueue } from "./timer.scheduler";
+import { getTimerQueue, startRepeatAlert } from "./timer.scheduler";
 
 interface TimerJobData {
   conversationId: string;
   timerId: string;
   thresholdMinutes: number;
   instanceId: string;
+  isRepeatAlert?: boolean;
 }
 
 export function initTimerProcessor(): void {
@@ -32,33 +33,43 @@ export function initTimerProcessor(): void {
     });
     if (!conversation) return;
 
-    // Find users to notify
+    // Find users to notify — exclude those with notifications muted (only AREA_ADMIN+ can mute)
     const permissions = await prisma.userInstancePermission.findMany({
       where: { instanceId, canRead: true },
       select: { userId: true },
     });
-    const userIds = permissions.map((p) => p.userId);
+    const allUserIds = permissions.map((p) => p.userId);
 
-    // Create notifications in DB
+    // Filter out muted users (only allowed to mute if they have an area admin role or above)
+    const mutedUsers = await prisma.user.findMany({
+      where: { id: { in: allUserIds }, notificationsMuted: true },
+      select: { id: true },
+    });
+    const mutedIds = new Set(mutedUsers.map((u) => u.id));
+    const userIds = allUserIds.filter((id) => !mutedIds.has(id));
+
+    // Create notifications in DB (only for non-muted users, skip DB spam on repeats)
     const thresholdLabel = thresholdMinutes >= 60 ? `${thresholdMinutes / 60}h` : `${thresholdMinutes}min`;
     const notifType = getNotificationType(thresholdMinutes);
 
-    await prisma.notification.createMany({
-      data: userIds.map((userId) => ({
-        userId,
-        type: notifType,
-        title: `Sem resposta há ${thresholdLabel}`,
-        body: `${conversation.contact.name || conversation.contact.phone} aguarda resposta há ${thresholdLabel}`,
-        metadata: { conversationId, instanceId, thresholdMinutes },
-      })),
-    });
+    // For repeat alerts (every-minute after 1h), only emit socket — don't flood DB
+    if (!job.data.isRepeatAlert && userIds.length > 0) {
+      await prisma.notification.createMany({
+        data: userIds.map((userId) => ({
+          userId,
+          type: notifType,
+          title: `Sem resposta há ${thresholdLabel}`,
+          body: `${conversation.contact.name || conversation.contact.phone} aguarda resposta há ${thresholdLabel}`,
+          metadata: { conversationId, instanceId, thresholdMinutes },
+        })),
+      });
 
-    // Record alert
-    await prisma.responseAlert.create({
-      data: { timerId, threshold: thresholdMinutes, notifiedUserIds: userIds },
-    });
+      await prisma.responseAlert.create({
+        data: { timerId, threshold: thresholdMinutes, notifiedUserIds: userIds },
+      });
+    }
 
-    // Emit Socket.io event
+    // Emit Socket.io event to non-muted users
     const io = getIO();
     const event: ResponseTimeAlertEvent = {
       conversationId,
@@ -70,16 +81,24 @@ export function initTimerProcessor(): void {
     };
 
     if (thresholdMinutes >= BROADCAST_ALERT_THRESHOLD_MINUTES) {
-      // Broadcast to ALL users on this instance
-      io.to(`instance:${instanceId}`).emit("alert:response_time", event);
+      // For the 1h+ threshold: emit to all non-muted users individually
+      for (const userId of allUserIds) {
+        if (!mutedIds.has(userId)) {
+          io.to(`user:${userId}`).emit("alert:response_time", event);
+        }
+      }
     } else {
-      // Emit only to relevant users
       for (const userId of userIds) {
         io.to(`user:${userId}`).emit("alert:response_time", event);
       }
     }
 
-    console.log(`[Timer] Alert fired — conversation ${conversationId}, threshold ${thresholdMinutes}m`);
+    // After the first 1h alert fires, start the every-minute repeat job
+    if (thresholdMinutes === 60 && !job.data.isRepeatAlert) {
+      await startRepeatAlert(conversationId, timerId, instanceId);
+    }
+
+    console.log(`[Timer] Alert fired — conversation ${conversationId}, threshold ${thresholdMinutes}m${job.data.isRepeatAlert ? " (repeat)" : ""}`);
   });
 }
 

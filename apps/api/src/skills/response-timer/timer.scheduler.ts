@@ -72,6 +72,9 @@ export async function resolveTimer(conversationId: string): Promise<void> {
     await job?.remove();
   }
 
+  // Remove the repeating every-minute job
+  await removeRepeatAlert(conversationId);
+
   console.log(`[Timer] Resolved for conversation ${conversationId}`);
 }
 
@@ -86,5 +89,35 @@ async function cancelTimer(conversationId: string): Promise<void> {
   for (const minutes of RESPONSE_THRESHOLDS_MINUTES) {
     const job = await queue.getJob(`alert:${conversationId}:${minutes}`);
     await job?.remove();
+  }
+
+  // Remove the repeating every-minute job if it exists
+  await removeRepeatAlert(conversationId);
+}
+
+export async function startRepeatAlert(
+  conversationId: string,
+  timerId: string,
+  instanceId: string
+): Promise<void> {
+  const queue = getTimerQueue();
+
+  const jobData = { conversationId, timerId, thresholdMinutes: 60, instanceId, isRepeatAlert: true };
+
+  await queue.add(jobData, {
+    repeat: { every: 60 * 1000 }, // fires every 60 seconds
+    jobId: `alert:repeat:${conversationId}`,
+    removeOnComplete: true,
+  });
+}
+
+export async function removeRepeatAlert(conversationId: string): Promise<void> {
+  const queue = getTimerQueue();
+  try {
+    const repeatableJobs = await queue.getRepeatableJobs();
+    const job = repeatableJobs.find((j) => j.key.includes(`alert:repeat:${conversationId}`));
+    if (job) await queue.removeRepeatableByKey(job.key);
+  } catch {
+    // Ignore if not found
   }
 }

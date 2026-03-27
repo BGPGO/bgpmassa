@@ -7,6 +7,7 @@ interface User {
   name: string;
   signature?: string;
   role: string;
+  notificationsMuted: boolean;
 }
 
 interface AuthState {

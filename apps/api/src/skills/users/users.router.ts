@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/authenticate";
 import { listUsers, getUser, createUser, updateUser, deleteUser } from "./users.service";
+import { prisma } from "../../config/database";
 import type { Request, Response } from "express";
 
 export const router = Router();
@@ -18,7 +19,41 @@ router.get("/", async (req: Request, res: Response) => {
 
 // GET /api/users/me - Current user profile
 router.get("/me", async (req: Request, res: Response) => {
-  res.json(await getUser(req.user.sub));
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.user.sub },
+    select: { id: true, email: true, name: true, signature: true, role: true, isActive: true, notificationsMuted: true, createdAt: true },
+  });
+  res.json(user);
+});
+
+// PATCH /api/users/me/mute-notifications - Toggle mute (AREA_ADMIN+ only)
+router.patch("/me/mute-notifications", async (req: Request, res: Response) => {
+  const userId = req.user.sub;
+  const role = req.user.role;
+
+  // ADMIN/SUPERADMIN always allowed; others need at least one AREA_ADMIN role
+  if (!["ADMIN", "SUPERADMIN"].includes(role)) {
+    const areaAdminEntry = await prisma.userArea.findFirst({
+      where: { userId, role: "AREA_ADMIN" },
+    });
+    if (!areaAdminEntry) {
+      res.status(403).json({ error: "Apenas administradores de área ou superiores podem silenciar notificações." });
+      return;
+    }
+  }
+
+  const { muted } = req.body as { muted: boolean };
+  if (typeof muted !== "boolean") {
+    res.status(400).json({ error: "Campo 'muted' deve ser boolean." });
+    return;
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { notificationsMuted: muted },
+    select: { id: true, notificationsMuted: true },
+  });
+  res.json(updated);
 });
 
 // GET /api/users/:id

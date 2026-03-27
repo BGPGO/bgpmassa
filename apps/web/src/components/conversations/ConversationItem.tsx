@@ -94,6 +94,9 @@ export function ConversationItem({ conversation }: Props) {
   const name = conversation.contact.name || conversation.contact.phone;
   const lastMsg = conversation.messages[0];
   const activeTimer = conversation.responseTimers.find((t) => t.status === "RUNNING");
+  const isOverdue = activeTimer
+    ? Math.floor((Date.now() - new Date(activeTimer.triggeredAt).getTime()) / 60000) >= 60
+    : false;
   const avatarLetter = name[0]?.toUpperCase() ?? "?";
   const avatarColor = getAvatarColor(name);
   const timestamp = formatTimestamp(conversation.lastMessageAt);
@@ -110,13 +113,18 @@ export function ConversationItem({ conversation }: Props) {
       )}
     >
       {/* Avatar */}
-      <div
-        className={cn(
-          "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-semibold text-base",
-          avatarColor
+      <div className="relative shrink-0">
+        <div
+          className={cn(
+            "w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-base",
+            avatarColor
+          )}
+        >
+          {avatarLetter}
+        </div>
+        {isOverdue && (
+          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white animate-pulse" title="Sem resposta há mais de 1h" />
         )}
-      >
-        {avatarLetter}
       </div>
 
       {/* Content */}

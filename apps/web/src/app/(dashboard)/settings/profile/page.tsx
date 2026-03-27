@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle, AlertCircle, User, PenLine, KeyRound } from "lucide-react";
+import { CheckCircle, AlertCircle, User, PenLine, KeyRound, BellOff, Bell } from "lucide-react";
 import { useAuthStore } from "../../../../store/auth.store";
 import { api } from "../../../../lib/api-client";
 import { cn } from "../../../../lib/utils";
@@ -29,8 +29,10 @@ export default function ProfilePage() {
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [savingMute, setSavingMute] = useState(false);
   const [profileFeedback, setProfileFeedback] = useState<FeedbackState>(null);
   const [passwordFeedback, setPasswordFeedback] = useState<FeedbackState>(null);
+  const [muteFeedback, setMuteFeedback] = useState<FeedbackState>(null);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -121,6 +123,22 @@ export default function ProfilePage() {
       showFeedback(setPasswordFeedback, { type: "error", message: msg });
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  // Show mute toggle for all; backend validates AREA_ADMIN/ADMIN/SUPERADMIN
+  const canMuteNotifications = true;
+
+  async function handleToggleMute() {
+    setSavingMute(true);
+    try {
+      await api.patch("/api/users/me/mute-notifications", { muted: !user?.notificationsMuted });
+      await loadMe();
+      showFeedback(setMuteFeedback, { type: "success", message: `Notificações ${!user?.notificationsMuted ? "silenciadas" : "reativadas"}.` });
+    } catch {
+      showFeedback(setMuteFeedback, { type: "error", message: "Erro ao alterar configuração." });
+    } finally {
+      setSavingMute(false);
     }
   }
 
@@ -297,6 +315,73 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
+
+        {/* Notifications mute card */}
+        {canMuteNotifications && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm mt-5">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                {user?.notificationsMuted ? (
+                  <BellOff className="w-4 h-4 text-purple-500" />
+                ) : (
+                  <Bell className="w-4 h-4 text-purple-500" />
+                )}
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-800 text-sm">Notificações de alerta</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Alertas de conversas sem resposta por mais de 1h</p>
+              </div>
+            </div>
+
+            <div className="px-5 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    {user?.notificationsMuted ? "Notificações silenciadas" : "Notificações ativas"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {user?.notificationsMuted
+                      ? "Você não receberá alertas de tempo de resposta."
+                      : "Você será notificado quando uma conversa ficar sem resposta por mais de 1h."}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleMute}
+                  disabled={savingMute}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50",
+                    user?.notificationsMuted ? "bg-gray-300" : "bg-brand"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+                      user?.notificationsMuted ? "translate-x-1" : "translate-x-6"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {muteFeedback && (
+                <div
+                  className={cn(
+                    "flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg mt-3",
+                    muteFeedback.type === "success"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  )}
+                >
+                  {muteFeedback.type === "success" ? (
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                  )}
+                  {muteFeedback.message}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Role badge */}
         <div className="mt-4 flex items-center gap-2">
