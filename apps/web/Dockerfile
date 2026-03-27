@@ -56,4 +56,4 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
 RUN mkdir -p /app/public
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "apps/web/server.js"]
