@@ -56,5 +56,5 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-# Startup: wait for deps, migrate, seed, serve
-CMD ["sh", "-c", "echo '[Startup] Waiting 15s for postgres/redis...' && sleep 15 && echo '[Startup] Running migrations...' && (node_modules/.bin/prisma migrate deploy 2>&1 || echo '[Startup] Migration failed') && echo '[Startup] Running seed...' && (node dist/seed.js 2>&1 || echo '[Startup] Seed failed') && echo '[Startup] Starting server...' && exec node dist/server.js"]
+# DEBUG: just start server, no migrations/seed
+CMD ["sh", "-c", "echo '[DEBUG] Starting server directly...' && node dist/server.js 2>&1 || echo '[DEBUG] Server crashed with code $?'"]
