@@ -9,15 +9,16 @@ echo "[Startup] REDIS_URL=$REDIS_URL"
 echo "[Startup] PORT=$PORT"
 echo "========================================="
 
-# Wait for PostgreSQL to be ready
+# Wait for PostgreSQL to be ready (using Prisma, not pg driver)
 echo "[Startup] Waiting for PostgreSQL..."
 MAX_RETRIES=30
 RETRY=0
 until node -e "
-  const { Client } = require('pg');
-  const c = new Client({ connectionString: process.env.DATABASE_URL });
-  c.connect()
-    .then(() => { console.log('[Startup] PostgreSQL is ready!'); c.end(); process.exit(0); })
+  const { PrismaClient } = require('@prisma/client');
+  const p = new PrismaClient();
+  p.\$queryRaw\`SELECT 1\`
+    .then(() => { console.log('[Startup] PostgreSQL is ready!'); return p.\$disconnect(); })
+    .then(() => process.exit(0))
     .catch(err => { console.error('[Startup] PostgreSQL not ready:', err.message); process.exit(1); });
 " 2>&1; do
   RETRY=$((RETRY + 1))
