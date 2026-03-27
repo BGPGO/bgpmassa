@@ -44,14 +44,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
 
-# Debug: verify shared package, env vars, and capture next build error
-RUN echo "=== CHECKING SHARED ===" && \
-    ls -la /app/node_modules/@bgpmassa/shared/ && \
-    echo "=== ENV VARS ===" && \
-    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" && \
-    echo "NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL" && \
-    echo "=== RUNNING NEXT BUILD ===" && \
-    /app/node_modules/.bin/next build
+# Write build output to file so it persists even on failure
+RUN /app/node_modules/.bin/next build > /tmp/next-build.log 2>&1; \
+    BUILD_EXIT=$?; \
+    cat /tmp/next-build.log; \
+    exit $BUILD_EXIT
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
