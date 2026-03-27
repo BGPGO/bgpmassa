@@ -1,63 +1,72 @@
 #!/bin/sh
-set -e
 
 echo "========================================="
 echo "[Startup] BGP Massa API starting..."
 echo "[Startup] NODE_ENV=$NODE_ENV"
-echo "[Startup] DATABASE_URL=$(echo "$DATABASE_URL" | cut -c1-40)..."
+echo "[Startup] DATABASE_URL=$(echo "$DATABASE_URL" | cut -c1-50)..."
 echo "[Startup] REDIS_URL=$REDIS_URL"
 echo "[Startup] PORT=$PORT"
 echo "========================================="
 
-# Wait for PostgreSQL to be ready (using Prisma, not pg driver)
+# Wait for PostgreSQL with simple TCP check (no modules needed)
 echo "[Startup] Waiting for PostgreSQL..."
-MAX_RETRIES=30
 RETRY=0
-until node -e "
-  const { PrismaClient } = require('@prisma/client');
-  const p = new PrismaClient();
-  p.\$queryRaw\`SELECT 1\`
-    .then(() => { console.log('[Startup] PostgreSQL is ready!'); return p.\$disconnect(); })
-    .then(() => process.exit(0))
-    .catch(err => { console.error('[Startup] PostgreSQL not ready:', err.message); process.exit(1); });
-" 2>&1; do
-  RETRY=$((RETRY + 1))
-  if [ $RETRY -ge $MAX_RETRIES ]; then
-    echo "[Startup] ERROR: PostgreSQL not ready after $MAX_RETRIES attempts. Exiting."
-    exit 1
+while [ $RETRY -lt 30 ]; do
+  if node -e "
+    const net = require('net');
+    const url = new URL(process.env.DATABASE_URL);
+    const s = net.createConnection(parseInt(url.port) || 5432, url.hostname);
+    s.on('connect', () => { s.destroy(); process.exit(0); });
+    s.on('error', () => process.exit(1));
+    setTimeout(() => process.exit(1), 3000);
+  " 2>/dev/null; then
+    echo "[Startup] PostgreSQL is reachable!"
+    break
   fi
-  echo "[Startup] Retry $RETRY/$MAX_RETRIES - waiting 2s..."
+  RETRY=$((RETRY + 1))
+  echo "[Startup] PostgreSQL not ready, retry $RETRY/30..."
   sleep 2
 done
 
-# Wait for Redis to be ready
+if [ $RETRY -ge 30 ]; then
+  echo "[Startup] ERROR: PostgreSQL not reachable after 30 attempts."
+  exit 1
+fi
+
+# Wait for Redis with simple TCP check
 echo "[Startup] Waiting for Redis..."
 RETRY=0
-until node -e "
-  const Redis = require('ioredis');
-  const r = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true, connectTimeout: 3000 });
-  r.connect()
-    .then(() => { console.log('[Startup] Redis is ready!'); r.disconnect(); process.exit(0); })
-    .catch(err => { console.error('[Startup] Redis not ready:', err.message); process.exit(1); });
-" 2>&1; do
-  RETRY=$((RETRY + 1))
-  if [ $RETRY -ge $MAX_RETRIES ]; then
-    echo "[Startup] ERROR: Redis not ready after $MAX_RETRIES attempts. Exiting."
-    exit 1
+while [ $RETRY -lt 30 ]; do
+  if node -e "
+    const net = require('net');
+    const url = new URL(process.env.REDIS_URL || 'redis://redis:6379');
+    const s = net.createConnection(parseInt(url.port) || 6379, url.hostname);
+    s.on('connect', () => { s.destroy(); process.exit(0); });
+    s.on('error', () => process.exit(1));
+    setTimeout(() => process.exit(1), 3000);
+  " 2>/dev/null; then
+    echo "[Startup] Redis is reachable!"
+    break
   fi
-  echo "[Startup] Retry $RETRY/$MAX_RETRIES - waiting 2s..."
+  RETRY=$((RETRY + 1))
+  echo "[Startup] Redis not ready, retry $RETRY/30..."
   sleep 2
 done
 
 # Run Prisma migrations
 echo "[Startup] Running Prisma migrations..."
-node_modules/.bin/prisma migrate deploy
+if ! node_modules/.bin/prisma migrate deploy; then
+  echo "[Startup] ERROR: Prisma migration failed!"
+  exit 1
+fi
 echo "[Startup] Migrations complete."
 
 # Run seed (idempotent)
 echo "[Startup] Running seed..."
-node dist/seed.js
-echo "[Startup] Seed complete."
+if ! node dist/seed.js; then
+  echo "[Startup] WARNING: Seed failed, continuing anyway..."
+fi
+echo "[Startup] Seed done."
 
 # Start server
 echo "[Startup] Starting server..."
