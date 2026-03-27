@@ -135,6 +135,9 @@ model Conversation {
 
   @@unique([instanceId, zapiChatId])
   @@index([areaId])
+  @@index([instanceId, lastMessageAt(sort: Desc)])
+  @@index([status])
+  @@index([assignedUserId])
   @@map("conversations")
 }
 

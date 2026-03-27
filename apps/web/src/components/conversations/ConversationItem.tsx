@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { format, isToday, isYesterday, isThisWeek, isThisYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -86,7 +87,7 @@ function getLabelColor(label: string): string {
   return LABEL_COLORS[label] ?? "bg-gray-100 text-gray-600 border-gray-200";
 }
 
-export function ConversationItem({ conversation }: Props) {
+export const ConversationItem = memo(function ConversationItem({ conversation }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isActive = pathname === `/conversations/${conversation.id}`;
@@ -188,4 +189,4 @@ export function ConversationItem({ conversation }: Props) {
       </div>
     </button>
   );
-}
+});

@@ -186,14 +186,30 @@ export default function ConversationPage() {
     }
   }
 
-  async function handleSend(body: string) {
-    const { data: newMsg } = await api.post(`/api/messages/${id}`, { body });
-    setMessages((prev) => {
-      if (prev.find((m) => m.id === newMsg.id)) return prev;
-      return [...prev, newMsg];
-    });
-    setTimeout(() => scrollToBottom("smooth"), 50);
-  }
+  const handleSend = useCallback(async (body: string) => {
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: MessageData = {
+      id: tempId,
+      conversationId: id,
+      senderId: null,
+      direction: "OUTBOUND",
+      type: "TEXT",
+      body,
+      signatureApplied: false,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+      sentAt: null,
+      sender: null,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    scrollToBottom("smooth");
+    try {
+      const { data: newMsg } = await api.post(`/api/messages/${id}`, { body });
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? newMsg : m)));
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    }
+  }, [id, scrollToBottom]);
 
   function handleStatusChange(newStatus: ConvStatus) {
     setConversation((prev) => (prev ? { ...prev, status: newStatus } : prev));
@@ -222,7 +238,7 @@ export default function ConversationPage() {
 
   const activeTimer = conversation?.responseTimers.find((t) => t.status === "RUNNING");
 
-  if (loadingConv || loadingMsgs) {
+  if (loadingConv) {
     return (
       <div className="flex items-center justify-center h-full bg-wa-chat">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />
@@ -240,7 +256,7 @@ export default function ConversationPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header — shown as soon as conversation details load */}
       <ChatHeader
         conversationId={id}
         contact={conversation.contact}
@@ -260,34 +276,42 @@ export default function ConversationPage() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-2 chat-bg"
       >
-        {/* Load more indicator */}
-        {loadingMore && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        {loadingMsgs ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-brand/50" />
           </div>
-        )}
+        ) : (
+          <>
+            {/* Load more indicator */}
+            {loadingMore && (
+              <div className="flex justify-center py-2">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            )}
 
-        {/* Messages with date separators */}
-        {messages.map((msg, index) => {
-          const prev = messages[index - 1];
-          const showDateSep =
-            !prev || !isSameDay(new Date(prev.createdAt), new Date(msg.createdAt));
-          const grouped = prev ? isGrouped(prev, msg) : false;
+            {/* Messages with date separators */}
+            {messages.map((msg, index) => {
+              const prev = messages[index - 1];
+              const showDateSep =
+                !prev || !isSameDay(new Date(prev.createdAt), new Date(msg.createdAt));
+              const grouped = prev ? isGrouped(prev, msg) : false;
 
-          return (
-            <div key={msg.id}>
-              {showDateSep && <DateSeparator date={new Date(msg.createdAt)} />}
-              <MessageBubble message={msg} isGrouped={grouped} />
-            </div>
-          );
-        })}
+              return (
+                <div key={msg.id}>
+                  {showDateSep && <DateSeparator date={new Date(msg.createdAt)} />}
+                  <MessageBubble message={msg} isGrouped={grouped} />
+                </div>
+              );
+            })}
 
-        {messages.length === 0 && !loadingMsgs && (
-          <div className="flex justify-center mt-12">
-            <span className="bg-white/80 text-gray-500 text-xs px-4 py-2 rounded-full shadow-sm border border-gray-200">
-              Sem mensagens ainda
-            </span>
-          </div>
+            {messages.length === 0 && (
+              <div className="flex justify-center mt-12">
+                <span className="bg-white/80 text-gray-500 text-xs px-4 py-2 rounded-full shadow-sm border border-gray-200">
+                  Sem mensagens ainda
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         <div ref={bottomRef} className="h-1" />
