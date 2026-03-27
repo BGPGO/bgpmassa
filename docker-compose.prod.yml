@@ -46,7 +46,7 @@ services:
       NODE_ENV: production
       PORT: "3001"
       APP_URL: ${APP_URL:-http://massa.bertuzzipatrimonial.com.br}
-      DATABASE_URL: "postgresql://postgres:%24sYY2%23er%26CB%24aZ8@db.vsszrhbnibsglxkjgqdm.supabase.co:5432/postgres"
+      DATABASE_URL: "postgresql://bgpmassa:bgpOITO9Sete%25%26%28%40NC@postgres:5432/bgpmassa"
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-3d7a2f9c1e84b56f0a3c7e2d9b1f8a45c6e3d7b2f0a9c4e1b8d5f3a7c2e6d9b4f1a8c5e2d7b0f4a3c9e6d1b7f5a2c8e4d0b6f9a1c3e7d5b2f8a0c4e9d6b3f7a5c1e8d4b0f2a6c9e3d7b1f5a8c2e0d4b9f6a3c7e1d5b8f2a0c6e9d3b7f4a1c5e2d8b0f6a4c9e7d1b3f5a0c2e8d6b4f9a7c3e1d5b2f0a8c4e6d9b7f3a5c1e4d0b8f2a6c9e3d7b5f1a0c4e8d2b6f9a3c7e0d5b1f4a8c2e6d0b9f3a5c7e1d4b8f2a0c6e9d3b7f5a1c4e2d8b0f6a3c9e7d1b5f4a0c2e6d9b3f7a8c1e5d0b4f2a9c6e3d7b1f5a8c0e4d2b9f6a7c3e1d5b0f4a2c8e6d3b9f1a7c5e0d4b8f2a6c9e3d1b7f5a4c0e8d2b6f9a3c7e1d5b0f4a8c2e6d9b7f3a5c1e8d4b0f2a6c3e9d7b1f5a2c8e4d0b6f9a1c3e7d5b2f8}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-9b4f1a8c5e2d7b0f4a3c9e6d1b7f5a2c8e4d0b6f9a1c3e7d5b2f8a0c4e9d6b3f7a5c1e8d4b0f2a6c9e3d7b1f5a8c2e0d4b9f6a3c7e1d5b8f2a0c6e9d3b7f4a1c5e2d8b0f6a4c9e7d1b3f5a0c2e8d6b4f9a7c3e1d5b2f0a8c4e6d9b7f3a5c1e4d0b8f2a6c9e3d7b5f1a0c4e8d2b6f9a3c7e0d5b1f4a8c2e6d0b9f3a5c7e1d4b8f2a0c6e9d3b7f5a1c4e2d8b0f6a3c9e7d1b5f4a0c2e6d9b3f7a8c1e5d0b4f2a9c6e3d7b1f5a8c0e4d2b9f6a7c3e1d5b0f4a2c8e6d3b9f1a7c5e0d4b8f2a6c9e3d1b7f5a4c0e8d2b6f9a3c7e1d5b0f4a8c2e6d9b7f3a5c1e8d4b0f2a6c3e9d7b1f5a2c8e4d0b6f9a1c3e7d5b2f8}

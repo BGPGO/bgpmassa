@@ -69,12 +69,13 @@ async function main() {
   const appUrl = (process.env.APP_URL || "http://localhost:3001").replace(/\/$/, "");
 
   // ── 1. Admin principal ───────────────────────────────────────────────────
+  const adminHash = await bcrypt.hash("Bgp@2025", 12);
   const admin = await prisma.user.upsert({
     where: { email: "admin@bgpmassa.com" },
-    update: {},
+    update: { passwordHash: adminHash },
     create: {
       email: "admin@bgpmassa.com",
-      passwordHash: await bcrypt.hash("Bgp@2025!", 12),
+      passwordHash: adminHash,
       name: "Admin BGP",
       role: "SUPERADMIN",
     },
@@ -161,7 +162,7 @@ async function main() {
   }
 
   console.log(`\n[Seed] Pronto!`);
-  console.log(`  Admin  : admin@bgpmassa.com / Bgp@2025!`);
+  console.log(`  Admin  : admin@bgpmassa.com / Bgp@2025`);
   console.log(`  App URL: ${appUrl}`);
 }
 
