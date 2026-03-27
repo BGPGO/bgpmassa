@@ -41,14 +41,10 @@ ARG NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN echo "=== STEP 1: Check node_modules ===" && ls /app/node_modules/.bin/next
-RUN echo "=== STEP 2: Check shared ===" && ls /app/node_modules/@bgpmassa/shared/dist/index.js
-RUN echo "=== STEP 3: Check web files ===" && ls /app/apps/web/src/ && ls /app/apps/web/next.config.mjs
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 WORKDIR /app/apps/web
-ENV NODE_OPTIONS="--max-old-space-size=2048"
-RUN /app/node_modules/.bin/next build 2>&1; echo "EXIT CODE: $?"
+RUN /app/node_modules/.bin/next build
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
