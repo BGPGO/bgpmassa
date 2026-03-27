@@ -56,5 +56,8 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-# Roda migrations, seed (idempotente) e inicia o servidor
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/seed.js && node dist/server.js"]
+# Entrypoint com wait-for-postgres e logging
+COPY apps/api/entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]
