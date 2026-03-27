@@ -43,7 +43,7 @@ ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
-RUN /app/node_modules/.bin/next build
+RUN /app/node_modules/.bin/next build 2>&1 || (echo "=== NEXT BUILD FAILED ===" && cat .next/trace 2>/dev/null; exit 1)
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
