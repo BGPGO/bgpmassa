@@ -43,7 +43,15 @@ ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
-RUN /app/node_modules/.bin/next build 2>&1 || (echo "=== NEXT BUILD FAILED ===" && cat .next/trace 2>/dev/null; exit 1)
+
+# Debug: verify shared package, env vars, and capture next build error
+RUN echo "=== CHECKING SHARED ===" && \
+    ls -la /app/node_modules/@bgpmassa/shared/ && \
+    echo "=== ENV VARS ===" && \
+    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" && \
+    echo "NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL" && \
+    echo "=== RUNNING NEXT BUILD ===" && \
+    /app/node_modules/.bin/next build
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
