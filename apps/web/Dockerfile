@@ -26,7 +26,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 WORKDIR /app/apps/web
-RUN node_modules/.bin/next build
+RUN /app/node_modules/.bin/next build
 
 EXPOSE 3000
-CMD ["node_modules/.bin/next", "start", "-p", "3000"]
+CMD ["/app/node_modules/.bin/next", "start", "-p", "3000"]
