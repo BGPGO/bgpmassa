@@ -56,5 +56,7 @@ COPY --from=builder /app/apps/api/package.json ./
 
 EXPOSE 3001
 
-# DEBUG: minimal server to test if container can listen
-CMD ["sh", "-c", "echo '[DEBUG] Container starting...' && echo '[DEBUG] DATABASE_URL='$(echo $DATABASE_URL | head -c 50) && echo '[DEBUG] Starting minimal server on 3001' && node -e \"require('http').createServer((q,s)=>{s.end(JSON.stringify({ok:true,env:process.env.NODE_ENV,db:process.env.DATABASE_URL?process.env.DATABASE_URL.substring(0,40):'unset'}))}).listen(3001,()=>console.log('[DEBUG] Listening on 3001'))\""]
+COPY apps/api/entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]
