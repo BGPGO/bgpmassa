@@ -42,13 +42,12 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-WORKDIR /app/apps/web
+RUN echo "=== STEP 1: Check node_modules ===" && ls /app/node_modules/.bin/next
+RUN echo "=== STEP 2: Check shared ===" && ls /app/node_modules/@bgpmassa/shared/dist/index.js
+RUN echo "=== STEP 3: Check web files ===" && ls /app/apps/web/src/ && ls /app/apps/web/next.config.mjs
 
-# Write build output to file so it persists even on failure
-RUN /app/node_modules/.bin/next build > /tmp/next-build.log 2>&1; \
-    BUILD_EXIT=$?; \
-    cat /tmp/next-build.log; \
-    exit $BUILD_EXIT
+WORKDIR /app/apps/web
+RUN echo "=== STEP 4: next build ===" && /app/node_modules/.bin/next build
 
 # ── Runner ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
